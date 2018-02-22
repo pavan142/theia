@@ -36,7 +36,8 @@ export class ExtensionContribution extends AbstractViewContribution<ExtensionWid
     onStart(app: FrontendApplication) {
         this.extensionManager.onWillStartInstallation(({ reverting }) => {
             if (reverting) {
-                this.messageService.error('Failed to install extensions. Reverting...');
+                // this.messageService.error('Failed to install extensions. Reverting...');
+                this.messageService.error({ message: 'Failed to install extensions. Reverting...' });
             } else {
                 this.messageService.info('Installing extensions...');
             }

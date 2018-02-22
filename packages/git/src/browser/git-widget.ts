@@ -162,7 +162,8 @@ export class GitWidget extends GitBaseWidget<GitFileChangeNode> {
                     this.update();
                     messageInput.focus();
                 }
-                this.messageService.error('Please provide a commit message!');
+                // this.messageService.error('Please provide a commit message!');
+                this.messageService.error({ message: 'Please provide a commit message!' });
             }
         };
         const refresh = h.a({

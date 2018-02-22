@@ -28,7 +28,8 @@ export class WindowImpl implements Window {
             return undefined;
         };
         if (type === MessageType.Error) {
-            return this.messageService.error(message, ...actionTitles).then(mapActionType);
+            // return this.messageService.error(message, ...actionTitles).then(mapActionType);
+            return this.messageService.error({ message: message, actions: actionTitles }).then(mapActionType);
         }
         if (type === MessageType.Warning) {
             return this.messageService.warn(message, ...actionTitles).then(mapActionType);

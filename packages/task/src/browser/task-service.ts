@@ -12,6 +12,7 @@ import { TaskServer, TaskExitedEvent, TaskOptions, TaskInfo } from '../common/ta
 import { TERMINAL_WIDGET_FACTORY_ID, TerminalWidgetFactoryOptions } from '@theia/terminal/lib/browser/terminal-widget';
 import { WidgetManager } from '@theia/core/lib/browser/widget-manager';
 import { TaskWatcher } from '../common/task-watcher';
+// import { MessageService, MessageOptions } from '@theia/core/lib/common/message-service';
 import { MessageService } from '@theia/core/lib/common/message-service';
 import { WorkspaceService } from '@theia/workspace/lib/browser/workspace-service';
 import { TaskConfigurations, TaskConfigurationClient } from './task-configurations';
@@ -48,7 +49,7 @@ export class TaskService implements TaskConfigurationClient {
         // notify user that task has started
         this.taskWatcher.onTaskCreated((event: TaskInfo) => {
             if (this.isEventForThisClient(event.ctx)) {
-                this.messageService.info(`Task #${event.taskId} created - ${event.label}`);
+                this.messageService.info(`Task #${event.taskId} created - ${event.label}`, { timeout: 3000 });
             }
         });
 
@@ -80,7 +81,9 @@ export class TaskService implements TaskConfigurationClient {
                 success += `Task ${event.taskId} has finished. exit code: ${event.code}, signal: ${event.signal}`;
                 this.messageService.info(success);
             } else {  // abnormal process exit
-                this.messageService.error(`Error: Task ${event.taskId} failed. Exit code: ${event.code}, signal: ${event.signal}`);
+                // this.messageService.error(`Error: Task ${event.taskId} failed. Exit code: ${event.code}, signal: ${event.signal}`);
+                // this.messageService.error({ message: `Error: Task ${event.taskId} failed. Exit code: ${event.code}, signal: ${event.signal}` });
+                this.messageService.error({ message: `Error: Task ${event.taskId} failed. Exit code: ${event.code}, signal: ${event.signal}`, options: { timeout: 1234 } });
             }
         });
     }
@@ -108,7 +111,12 @@ export class TaskService implements TaskConfigurationClient {
             taskInfo = await this.taskServer.run(this.prepareTaskConfiguration(task), this.getContext());
         } catch (error) {
             this.logger.error(`Error launching task '${taskName}': ${error}`);
-            this.messageService.error(`Error launching task '${taskName}': ${error}`);
+            //   let jb = MessageOptions.timeout = 0;
+            // this.messageService.error({ message: `Error launching task '${taskName}': ${error}` });
+            this.messageService.error({ message: `Error launching task '${taskName}': ${error}`, options: { timeout: 1357 } });
+            // this.messageService.error(`Error launching task '${taskName}': ${error}`);
+            // this.messageService.error(`Error launching task '${taskName}': ${error}`, { timeout: 3000 });
+            //           this.messageService.error(`Error launching task '${taskName}': ${error}`, { timeout: 0 });
             return;
         }
 
