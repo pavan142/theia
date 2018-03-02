@@ -26,6 +26,7 @@ import { NavigatorTreeDecorator } from '@theia/navigator/lib/browser/navigator-d
 import { GitDecorator } from './git-decorator';
 import { bindGitPreferences } from './git-preferences';
 import { bindDirtyDiff } from './dirty-diff/dirty-diff-module';
+import { bindBlame } from './blame/blame-module';
 import { GitRepositoryTracker } from './git-repository-tracker';
 
 import '../../src/browser/style/index.css';
@@ -35,6 +36,7 @@ export default new ContainerModule(bind => {
     bindGitDiffModule(bind);
     bindGitHistoryModule(bind);
     bindDirtyDiff(bind);
+    bindBlame(bind);
     bind(GitRepositoryTracker).toSelf().inSingletonScope();
     bind(GitWatcherServerProxy).toDynamicValue(context => WebSocketConnectionProvider.createProxy(context.container, GitWatcherPath)).inSingletonScope();
     bind(GitWatcherServer).to(ReconnectingGitWatcherServer).inSingletonScope();
