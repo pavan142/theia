@@ -5,56 +5,62 @@
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { injectable, inject } from "inversify";
-import { Event, Emitter, Disposable, SelectionProvider } from "../../common";
-import { ITree, ITreeNode } from "./tree";
-
-export const ITreeSelectionService = Symbol("ITreeSelectionService");
+import { injectable, inject } from 'inversify';
+import { Tree, TreeNode } from './tree';
+import { Event, Emitter, Disposable, SelectionProvider, notEmpty } from '../../common';
 
 /**
  * The tree selection service.
  */
-export interface ITreeSelectionService extends Disposable, SelectionProvider<Readonly<ISelectableTreeNode> | undefined> {
+export const TreeSelectionService = Symbol("TreeSelectionService");
+export interface TreeSelectionService extends Disposable, SelectionProvider<ReadonlyArray<Readonly<SelectableTreeNode>>> {
+
     /**
-     * The node selected in the tree. If defined then valid.
-     * Undefined if there is no node selection.
+     * The tree selection, representing the selected nodes from the tree. If nothing is selected, the
+     * result will be empty.
      */
-    readonly selectedNode: Readonly<ISelectableTreeNode> | undefined;
+    readonly selectedNodes: ReadonlyArray<Readonly<SelectableTreeNode>>;
+
     /**
-     * Emit when the node selection is changed.
+     * Emitted when the selection has changed in the tree.
      */
-    readonly onSelectionChanged: Event<Readonly<ISelectableTreeNode> | undefined>;
+    readonly onSelectionChanged: Event<ReadonlyArray<Readonly<SelectableTreeNode>>>;
+
     /**
-     * Select a given node.
-     * If a given node is undefined or invalid then remove the node selection.
+     * Sets the selection state by unselecting all the currently selected items, and selecting all
+     * the valid, existing tree nodes from the argument.
      */
-    selectNode(node: Readonly<ISelectableTreeNode> | undefined): void;
+    setSelection(nodes: ReadonlyArray<Readonly<SelectableTreeNode>>): void;
+
 }
 
 /**
- * The selectable tree node.
+ * A selectable tree node.
  */
-export interface ISelectableTreeNode extends ITreeNode {
+export interface SelectableTreeNode extends TreeNode {
+
     /**
-     * Test whether this node is selected.
+     * `true` if the tree node is selected. Otherwise, `false`.
      */
     selected: boolean;
+
 }
 
-export namespace ISelectableTreeNode {
-    export function is(node: ITreeNode | undefined): node is ISelectableTreeNode {
+export namespace SelectableTreeNode {
+
+    export function is(node: TreeNode | undefined): node is SelectableTreeNode {
         return !!node && 'selected' in node;
     }
 
-    export function isSelected(node: ITreeNode | undefined): node is ISelectableTreeNode {
+    export function isSelected(node: TreeNode | undefined): node is SelectableTreeNode {
         return is(node) && node.selected;
     }
 
-    export function isVisible(node: ITreeNode | undefined): node is ISelectableTreeNode {
-        return is(node) && ITreeNode.isVisible(node);
+    export function isVisible(node: TreeNode | undefined): node is SelectableTreeNode {
+        return is(node) && TreeNode.isVisible(node);
     }
 
-    export function getVisibleParent(node: ITreeNode | undefined): ISelectableTreeNode | undefined {
+    export function getVisibleParent(node: TreeNode | undefined): SelectableTreeNode | undefined {
         if (node) {
             if (isVisible(node.parent)) {
                 return node.parent;
@@ -65,47 +71,44 @@ export namespace ISelectableTreeNode {
 }
 
 @injectable()
-export class TreeSelectionService implements ITreeSelectionService {
+export class TreeSelectionServiceImpl implements TreeSelectionService {
 
-    protected _selectedNode: ISelectableTreeNode | undefined;
-    protected readonly onSelectionChangedEmitter = new Emitter<ISelectableTreeNode | undefined>();
-
-    constructor( @inject(ITree) protected readonly tree: ITree) { }
+    @inject(Tree)
+    protected readonly tree: Tree;
+    protected readonly _selectedNodes: SelectableTreeNode[] = [];
+    protected readonly onSelectionChangedEmitter = new Emitter<ReadonlyArray<Readonly<SelectableTreeNode>>>();
 
     dispose() {
         this.onSelectionChangedEmitter.dispose();
     }
 
-    get selectedNode(): ISelectableTreeNode | undefined {
-        return this._selectedNode;
+    get selectedNodes(): ReadonlyArray<Readonly<SelectableTreeNode>> {
+        return this._selectedNodes.slice();
     }
 
-    get onSelectionChanged(): Event<ISelectableTreeNode | undefined> {
+    get onSelectionChanged(): Event<ReadonlyArray<Readonly<SelectableTreeNode>>> {
         return this.onSelectionChangedEmitter.event;
     }
 
     protected fireSelectionChanged(): void {
-        this.onSelectionChangedEmitter.fire(this._selectedNode);
+        this.onSelectionChangedEmitter.fire(this._selectedNodes.slice());
     }
 
-    selectNode(raw: ISelectableTreeNode | undefined): void {
-        const node = this.tree.validateNode(raw);
-        if (ISelectableTreeNode.is(node)) {
-            this.doSelectNode(node);
-        } else {
-            this.doSelectNode(undefined);
-        }
+    setSelection(nodes: ReadonlyArray<Readonly<SelectableTreeNode>>): void {
+        this.doSelectNodes(nodes.slice().filter(this.validateNode.bind(this)).filter(notEmpty).filter(SelectableTreeNode.is));
     }
 
-    protected doSelectNode(node: ISelectableTreeNode | undefined): void {
-        if (this._selectedNode) {
-            this._selectedNode.selected = false;
-        }
-        this._selectedNode = node;
-        if (node) {
-            node.selected = true;
-        }
+    protected doSelectNodes(nodes: SelectableTreeNode[]): void {
+        const copy = nodes.slice();
+        this._selectedNodes.forEach(node => node.selected = false);
+        this._selectedNodes.length = 0;
+        copy.forEach(node => node.selected = true);
+        this._selectedNodes.push(...copy);
         this.fireSelectionChanged();
+    }
+
+    protected validateNode(node: Readonly<TreeNode> | undefined): Readonly<TreeNode> | undefined {
+        return this.tree.validateNode(node);
     }
 
 }
