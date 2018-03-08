@@ -89,7 +89,7 @@ export class FileTreeWidget extends TreeWidget {
         this.toCancelNodeExpansion.dispose();
         const containing = DirNode.getContainingDir(node);
         if (!!containing && !containing.selected) {
-            this.model.addSelection({ node: containing });
+            this.model.addSelection(containing);
         }
     }
 

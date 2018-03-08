@@ -152,7 +152,7 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
             this.fireChanged();
             if (!node.expanded && [...this.selectedNodes].some(selectedNode => CompositeTreeNode.isAncestor(node, selectedNode))) {
                 if (SelectableTreeNode.isVisible(node)) {
-                    this.addSelection({ node });
+                    this.addSelection(node);
                 }
             }
         }));
@@ -299,7 +299,7 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
             const node = this.selectedNodes[0];
             const parent = SelectableTreeNode.getVisibleParent(node);
             if (parent) {
-                this.addSelection({ node: parent });
+                this.addSelection(parent);
             }
         }
     }
@@ -339,12 +339,12 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
             this.expandNode(node);
         }
         if (SelectableTreeNode.is(node)) {
-            this.addSelection({ node });
+            this.addSelection(node);
         }
     }
 
-    addSelection(selection: TreeSelection): void {
-        this.selectionService.addSelection(selection);
+    addSelection(selectionOrTreeNode: TreeSelection | Readonly<SelectableTreeNode>): void {
+        this.selectionService.addSelection(selectionOrTreeNode);
     }
 
     // selectNode(node: Readonly<SelectableTreeNode>, type?: TreeSelection.SelectionType): void {

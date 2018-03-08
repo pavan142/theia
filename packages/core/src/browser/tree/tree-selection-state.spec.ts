@@ -15,7 +15,8 @@ import { TreeModel } from './tree-model';
 import { MOCK_ROOT } from './test/mock-tree-model';
 import { ExpandableTreeNode } from './tree-expansion';
 import { createTreeContainer } from './tree-container';
-import { SelectableTreeNode, TreeSelection, TreeSelectionState } from './tree-selection';
+import { TreeSelectionState } from './tree-selection-state';
+import { SelectableTreeNode, TreeSelection } from './tree-selection';
 
 disableJSDOM();
 
@@ -35,15 +36,11 @@ describe('tree-selection-state', () => {
 
     beforeEach(() => {
         model.root = MOCK_ROOT();
-        model.addSelection('reset');
         expect(model.selectedNodes).to.be.empty;
-        if (findNode) { }
-        if (toggleSelection) { }
-        if (rangeSelection) { }
     });
 
-    it('bar', () => {
-        expectState(new TreeSelectionState(model)
+    it('01', () => {
+        expectState(newState()
             .nextState(toggleSelection('1.1'))
             .nextState(toggleSelection('1.1.2'))
             .nextState(toggleSelection('1.2.1.1'))
@@ -53,8 +50,8 @@ describe('tree-selection-state', () => {
             ]);
     });
 
-    it('foo', () => {
-        expectState(new TreeSelectionState(model)
+    it('02', () => {
+        expectState(newState()
             .nextState(toggleSelection('1.1'))
             .nextState(toggleSelection('1.2.1.1'))
             .nextState(rangeSelection('1.2.3'))
@@ -63,8 +60,8 @@ describe('tree-selection-state', () => {
             ]);
     });
 
-    it('baz', () => {
-        expectState(new TreeSelectionState(model)
+    it('03', () => {
+        expectState(newState()
             .nextState(toggleSelection('1.1'))
             .nextState(toggleSelection('1.2.1.1'))
             .nextState(rangeSelection('1.2.3'))
@@ -73,8 +70,8 @@ describe('tree-selection-state', () => {
             ]);
     });
 
-    it('qwe', () => {
-        expectState(new TreeSelectionState(model)
+    it('04', () => {
+        expectState(newState()
             .nextState(toggleSelection('1.1'))
             .nextState(toggleSelection('1.2.1.1'))
             .nextState(toggleSelection('1.1')), [
@@ -82,8 +79,8 @@ describe('tree-selection-state', () => {
             ]);
     });
 
-    it('asd', () => {
-        expectState(new TreeSelectionState(model)
+    it('05', () => {
+        expectState(newState()
             .nextState(toggleSelection('1.1'))
             .nextState(toggleSelection('1.1.2'))
             .nextState(toggleSelection('1.2.1.2'))
@@ -92,6 +89,57 @@ describe('tree-selection-state', () => {
                 '1.2.3', '1.2.1.2', '1.1.2', '1.1'
             ]);
     });
+
+    it('06', () => {
+        expectState(newState()
+            .nextState(toggleSelection('1.2.2'))
+            .nextState(rangeSelection('1.2.1'))
+            .nextState(rangeSelection('1.2.3'))
+            .nextState(rangeSelection('1.1'))
+            .nextState(toggleSelection('1.1.2'))
+            .nextState(toggleSelection('1.2.1.1'))
+            .nextState(toggleSelection('1.2.1.1'))
+            .nextState(rangeSelection('1.2')), [
+
+            ]);
+    });
+
+    it('07', () => {
+        expectState(newState()
+            .nextState(toggleSelection('1.2.2'))
+            .nextState(rangeSelection('1.1.1'))
+            .nextState(toggleSelection('1.1.2'))
+            .nextState(rangeSelection('1.2.3')), [
+
+            ]);
+    });
+
+    it('08', () => {
+        expectState(newState()
+            .nextState(toggleSelection('1.2.2'))
+            .nextState(toggleSelection('1.2.1.1'))
+            .nextState(rangeSelection('1.1.1'))
+            .nextState(rangeSelection('1.2.3')), [
+
+            ]);
+    });
+
+    it('09', () => {
+        expectState(newState()
+            .nextState(toggleSelection('1.2.3'))
+            .nextState(rangeSelection('1.2.3'))
+            .nextState(toggleSelection('1.2.1.1'))
+            .nextState(toggleSelection('1.2.1.2'))
+            .nextState(toggleSelection('1.2.1'))
+            .nextState(toggleSelection('1.2'))
+            .nextState(rangeSelection('1.1')), [
+
+            ]);
+    });
+
+    function newState() {
+        return new TreeSelectionState(model);
+    }
 
     function defaultSelection(id: string, type: TreeSelection.SelectionType = TreeSelection.SelectionType.DEFAULT): TreeSelection {
         const node = findNode(id);

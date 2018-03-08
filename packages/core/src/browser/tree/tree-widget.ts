@@ -122,7 +122,7 @@ export class TreeWidget extends VirtualWidget implements StatefulWidget {
     protected onActivateRequest(msg: Message): void {
         super.onActivateRequest(msg);
         if (!this.model.selectedNodes && SelectableTreeNode.is(this.model.root)) {
-            this.model.addSelection({ node: this.model.root });
+            this.model.addSelection(this.model.root);
         }
         this.node.focus();
     }
@@ -514,7 +514,7 @@ export class TreeWidget extends VirtualWidget implements StatefulWidget {
                         const type = TreeSelection.SelectionType.TOGGLE;
                         this.model.addSelection({ node, type });
                     } else {
-                        this.model.addSelection({ node });
+                        this.model.addSelection(node);
                     }
                 }
                 if (this.isExpandable(node) && !shiftMask && !ctrlCmdMask) {
@@ -522,7 +522,7 @@ export class TreeWidget extends VirtualWidget implements StatefulWidget {
                 }
             } else {
                 if (SelectableTreeNode.is(node)) {
-                    this.model.addSelection({ node });
+                    this.model.addSelection(node);
                 }
                 if (this.isExpandable(node) && !this.hasCtrlCmdMask(event) && !this.hasShiftMask(event)) {
                     this.model.toggleNodeExpansion(node);
