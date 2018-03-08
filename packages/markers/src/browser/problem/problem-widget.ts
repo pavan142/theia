@@ -65,7 +65,7 @@ export class ProblemWidget extends TreeWidget {
 
     protected onUpdateRequest(msg: Message) {
         if (!this.model.selectedNodes && SelectableTreeNode.is(this.model.root)) {
-            this.model.selectNode(this.model.root);
+            this.model.addSelection({ node: this.model.root });
         }
         super.onUpdateRequest(msg);
     }

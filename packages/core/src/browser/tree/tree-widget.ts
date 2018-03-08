@@ -17,7 +17,7 @@ import { VirtualWidget, VirtualRenderer, SELECTED_CLASS, COLLAPSED_CLASS } from 
 import { TreeNode, CompositeTreeNode } from "./tree";
 import { TreeModel } from "./tree-model";
 import { ExpandableTreeNode } from "./tree-expansion";
-import { SelectableTreeNode } from "./tree-selection";
+import { SelectableTreeNode, TreeSelection } from "./tree-selection";
 import { TreeDecoration, TreeDecoratorService } from "./tree-decorator";
 import { notEmpty } from '../../common/objects';
 import { isOSX } from '../../common/os';
@@ -122,7 +122,7 @@ export class TreeWidget extends VirtualWidget implements StatefulWidget {
     protected onActivateRequest(msg: Message): void {
         super.onActivateRequest(msg);
         if (!this.model.selectedNodes && SelectableTreeNode.is(this.model.root)) {
-            this.model.selectNode(this.model.root);
+            this.model.addSelection({ node: this.model.root });
         }
         this.node.focus();
     }
@@ -488,11 +488,13 @@ export class TreeWidget extends VirtualWidget implements StatefulWidget {
     }
 
     protected handleUp(event: KeyboardEvent): void {
-        this.model.selectPrevNode(!!this.props.multiSelect && this.hasShiftMask(event));
+        const type = !!this.props.multiSelect && this.hasShiftMask(event) ? TreeSelection.SelectionType.RANGE : undefined;
+        this.model.selectPrevNode(type);
     }
 
     protected handleDown(event: KeyboardEvent): void {
-        this.model.selectNextNode(!!this.props.multiSelect && this.hasShiftMask(event));
+        const type = !!!!this.props.multiSelect && this.hasShiftMask(event) ? TreeSelection.SelectionType.RANGE : undefined;
+        this.model.selectNextNode(type);
     }
 
     protected handleEnter(event: KeyboardEvent): void {
@@ -506,11 +508,13 @@ export class TreeWidget extends VirtualWidget implements StatefulWidget {
                 const ctrlCmdMask = this.hasCtrlCmdMask(event);
                 if (SelectableTreeNode.is(node)) {
                     if (shiftMask) {
-                        this.model.selectRange(node, this.model.selectedNodes[0], true);
+                        const type = TreeSelection.SelectionType.RANGE;
+                        this.model.addSelection({ node, type });
                     } else if (ctrlCmdMask) {
-                        this.model.toggleSelection(node);
+                        const type = TreeSelection.SelectionType.TOGGLE;
+                        this.model.addSelection({ node, type });
                     } else {
-                        this.model.selectNode(node);
+                        this.model.addSelection({ node });
                     }
                 }
                 if (this.isExpandable(node) && !shiftMask && !ctrlCmdMask) {
@@ -518,7 +522,7 @@ export class TreeWidget extends VirtualWidget implements StatefulWidget {
                 }
             } else {
                 if (SelectableTreeNode.is(node)) {
-                    this.model.selectNode(node);
+                    this.model.addSelection({ node });
                 }
                 if (this.isExpandable(node) && !this.hasCtrlCmdMask(event) && !this.hasShiftMask(event)) {
                     this.model.toggleNodeExpansion(node);
@@ -537,7 +541,8 @@ export class TreeWidget extends VirtualWidget implements StatefulWidget {
         if (SelectableTreeNode.is(node)) {
             // Keep the selection for the context menu, if the widget support multi-selection and the right click happens on an already selected node.
             if (!this.props.multiSelect || !node.selected) {
-                this.model.selectNode(node, !!this.props.multiSelect && this.hasCtrlCmdMask(event));
+                const type = !!this.props.multiSelect && this.hasCtrlCmdMask(event) ? TreeSelection.SelectionType.TOGGLE : undefined;
+                this.model.addSelection({ node, type });
             }
             const contextMenuPath = this.props.contextMenuPath;
             if (contextMenuPath) {

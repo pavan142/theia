@@ -8,10 +8,10 @@
 import { inject, injectable, postConstruct } from 'inversify';
 import { DisposableCollection, Event, Emitter, SelectionProvider } from '../../common';
 import { Tree, TreeNode, CompositeTreeNode } from './tree';
-import { TreeSelectionService, SelectableTreeNode } from './tree-selection';
+import { TreeSelectionService, SelectableTreeNode, TreeSelection } from './tree-selection';
 import { TreeExpansionService, ExpandableTreeNode } from './tree-expansion';
 import { TreeNavigationService } from './tree-navigation';
-import { TreeIterator, PreOrderTreeIterator, BottomToTopTreeIterator, TopToBottomTreeIterator } from './tree-iterator';
+import { TreeIterator, BottomToTopTreeIterator, TopToBottomTreeIterator } from './tree-iterator';
 
 /**
  * The tree model.
@@ -82,48 +82,48 @@ export interface TreeModel extends Tree, TreeSelectionService, TreeExpansionServ
     /**
      * Selects the previous node relatively to the currently selected one. This method takes the expansion state of the tree into consideration.
      */
-    selectPrevNode(preserveSelection?: boolean): void;
+    selectPrevNode(type?: TreeSelection.SelectionType): void;
 
     /**
      * Selects the next node relatively to the currently selected one. This method takes the expansion state of the tree into consideration.
      */
-    selectNextNode(preserveSelection?: boolean): void;
+    selectNextNode(type?: TreeSelection.SelectionType): void;
 
-    /**
-     * Selects the tree node argument.
-     *
-     *  - If the `preserveSelection` argument is `false` or `undefined`, then it has the same effect as invoking `setSelection([node])`. The previous selection
-     * state will be overridden with given single tree node.
-     *  - If `preserveSelection` is `true`, then the previous selection state will be kept and the `node` argument will be merged into the previous selection state.
-     *  - If `preserveSelection` is `true` and the `node` was already selected, the selection content will not change but the order of the selected items. The
-     * `node` argument will be the most recently selected item.
-     */
-    selectNode(node: Readonly<SelectableTreeNode>, preserveSelection?: boolean): void;
+    // /**
+    //  * Selects the tree node argument.
+    //  *
+    //  *  - If the `preserveSelection` argument is `false` or `undefined`, then it has the same effect as invoking `setSelection([node])`. The previous selection
+    //  * state will be overridden with given single tree node.
+    //  *  - If `preserveSelection` is `true`, then the previous selection state will be kept and the `node` argument will be merged into the previous selection state.
+    //  *  - If `preserveSelection` is `true` and the `node` was already selected, the selection content will not change but the order of the selected items. The
+    //  * `node` argument will be the most recently selected item.
+    //  */
+    // selectNode(node: Readonly<SelectableTreeNode>, preserveSelection?: boolean): void;
 
-    /**
-     * Unselects the given tree node argument. Has no effect, if the argument is not a valid tree node, or was not yet selected.
-     */
-    unselectNode(node: Readonly<SelectableTreeNode>): void;
+    // /**
+    //  * Unselects the given tree node argument. Has no effect, if the argument is not a valid tree node, or was not yet selected.
+    //  */
+    // unselectNode(node: Readonly<SelectableTreeNode>): void;
 
-    /**
-     * Toggles the selection state of the `node` argument. If the node was not yet selected, it will be. Toggling the state of the tree node
-     * will keep any previous selection state. If the `node` was selected, `unselects` the node.
-     */
-    toggleSelection(node: Readonly<SelectableTreeNode>): void;
+    // /**
+    //  * Toggles the selection state of the `node` argument. If the node was not yet selected, it will be. Toggling the state of the tree node
+    //  * will keep any previous selection state. If the `node` was selected, `unselects` the node.
+    //  */
+    // toggleSelection(node: Readonly<SelectableTreeNode>): void;
 
-    /**
-     * Returns with the nodes between (inclusive) the `toNode` and the `fromNode`. Returns with an empty array if either the `toNode` or the `fromNode` is invalid.
-     */
-    selectionRange(toNode: Readonly<SelectableTreeNode>, fromNode: Readonly<SelectableTreeNode>): ReadonlyArray<Readonly<SelectableTreeNode>>;
+    // /**
+    //  * Returns with the nodes between (inclusive) the `toNode` and the `fromNode`. Returns with an empty array if either the `toNode` or the `fromNode` is invalid.
+    //  */
+    // selectionRange(toNode: Readonly<SelectableTreeNode>, fromNode: Readonly<SelectableTreeNode>): ReadonlyArray<Readonly<SelectableTreeNode>>;
 
-    /**
-     * Calculates and sets the selection range between the `fromNode` and the `toNode`.
-     *  - Has not effect if either the `fromNode` or the `toNode` does not exist or invalid.
-     *  - If `preserveSelection` is `true`, then the range of selection will be merged into the previous selection state.
-     *  - If `preserveSelection` is `false` or `undefined`, then the previous state will be overridden with the selection range.
-     *  - If `fromNode` is `undefined`, then the most recently selected tree node will be used instead.
-     */
-    selectRange(toNode: Readonly<SelectableTreeNode>, fromNode?: Readonly<SelectableTreeNode>, preserveSelection?: boolean): void;
+    // /**
+    //  * Calculates and sets the selection range between the `fromNode` and the `toNode`.
+    //  *  - Has not effect if either the `fromNode` or the `toNode` does not exist or invalid.
+    //  *  - If `preserveSelection` is `true`, then the range of selection will be merged into the previous selection state.
+    //  *  - If `preserveSelection` is `false` or `undefined`, then the previous state will be overridden with the selection range.
+    //  *  - If `fromNode` is `undefined`, then the most recently selected tree node will be used instead.
+    //  */
+    // selectRange(toNode: Readonly<SelectableTreeNode>, fromNode?: Readonly<SelectableTreeNode>, preserveSelection?: boolean): void;
 
 }
 
@@ -152,7 +152,7 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
             this.fireChanged();
             if (!node.expanded && [...this.selectedNodes].some(selectedNode => CompositeTreeNode.isAncestor(node, selectedNode))) {
                 if (SelectableTreeNode.isVisible(node)) {
-                    this.setSelection([node]);
+                    this.addSelection({ node });
                 }
             }
         }));
@@ -213,10 +213,6 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
         return this.selectionService.onSelectionChanged;
     }
 
-    setSelection(raw: ReadonlyArray<Readonly<SelectableTreeNode>>): void {
-        this.selectionService.setSelection(raw);
-    }
-
     get onExpansionChanged() {
         return this.expansionService.onExpansionChanged;
     }
@@ -247,23 +243,23 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
         }
     }
 
-    selectPrevNode(preserveSelection?: boolean): void {
+    selectPrevNode(type?: TreeSelection.SelectionType): void {
         const node = this.selectedNodes[0];
         const iterator = this.createBackwardIterator(node);
         if (iterator) {
-            this.selectNextVisibleNode(iterator, preserveSelection);
+            this.selectNextVisibleNode(iterator, type);
         }
     }
 
-    selectNextNode(preserveSelection?: boolean): void {
+    selectNextNode(type?: TreeSelection.SelectionType): void {
         const node = this.selectedNodes[0];
         const iterator = this.createIterator(node);
         if (iterator) {
-            this.selectNextVisibleNode(iterator, preserveSelection);
+            this.selectNextVisibleNode(iterator, type);
         }
     }
 
-    protected selectNextVisibleNode(iterator: TreeIterator, preserveSelection?: boolean): void {
+    protected selectNextVisibleNode(iterator: TreeIterator, type?: TreeSelection.SelectionType): void {
         // Skip the first item. // TODO: clean this up, and skip the first item in a different way without loading everything.
         iterator.next();
         let result = iterator.next();
@@ -272,7 +268,7 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
         }
         const node = result.value;
         if (SelectableTreeNode.isVisible(node)) {
-            this.selectNode(node, preserveSelection);
+            this.addSelection({ node, type });
         }
     }
 
@@ -303,7 +299,7 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
             const node = this.selectedNodes[0];
             const parent = SelectableTreeNode.getVisibleParent(node);
             if (parent) {
-                this.setSelection([parent]);
+                this.addSelection({ node: parent });
             }
         }
     }
@@ -343,107 +339,111 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
             this.expandNode(node);
         }
         if (SelectableTreeNode.is(node)) {
-            this.setSelection([node]);
+            this.addSelection({ node });
         }
     }
 
-    selectNode(node: Readonly<SelectableTreeNode>, preserveSelection?: boolean): void {
-        if (!!preserveSelection) {
-            const copy = this.selectedNodes.slice();
-            const index = copy.indexOf(node);
-            if (index === -1) {
-                this.selectionService.setSelection([node, ...copy]);
-            } else {
-                // No need to update the selection if the argument is already the most recently selected node at the 0th index.
-                if (index !== 0) {
-                    copy.splice(index, 1);
-                    copy.unshift(node);
-                    this.selectionService.setSelection(copy);
-                }
-            }
-        } else {
-            this.selectionService.setSelection([node]);
-        }
+    addSelection(selection: TreeSelection): void {
+        this.selectionService.addSelection(selection);
     }
 
-    unselectNode(node: Readonly<SelectableTreeNode>): void {
-        const copy = this.selectedNodes.slice();
-        const index = copy.indexOf(node);
-        if (index !== -1) {
-            copy.splice(index, 1);
-            this.selectionService.setSelection(copy);
-        }
-    }
+    // selectNode(node: Readonly<SelectableTreeNode>, type?: TreeSelection.SelectionType): void {
+    //     if (!!type) {
+    //         const copy = this.selectedNodes.slice();
+    //         const index = copy.indexOf(node);
+    //         if (index === -1) {
+    //             this.selectionService.setSelection([node, ...copy]);
+    //         } else {
+    //             // No need to update the selection if the argument is already the most recently selected node at the 0th index.
+    //             if (index !== 0) {
+    //                 copy.splice(index, 1);
+    //                 copy.unshift(node);
+    //                 this.selectionService.setSelection(copy);
+    //             }
+    //         }
+    //     } else {
+    //         this.selectionService.setSelection([node]);
+    //     }
+    // }
 
-    toggleSelection(node: Readonly<SelectableTreeNode>): void {
-        if (node.selected) {
-            this.unselectNode(node);
-        } else {
-            this.selectNode(node, true);
-        }
-    }
+    // unselectNode(node: Readonly<SelectableTreeNode>): void {
+    //     const copy = this.selectedNodes.slice();
+    //     const index = copy.indexOf(node);
+    //     if (index !== -1) {
+    //         copy.splice(index, 1);
+    //         this.selectionService.setSelection(copy);
+    //     }
+    // }
 
-    selectionRange(toNode: Readonly<SelectableTreeNode>, fromNode: Readonly<SelectableTreeNode>): ReadonlyArray<Readonly<SelectableTreeNode>> {
-        if (toNode === fromNode) {
-            return [];
-        }
-        const { root } = this;
-        if (root === undefined) {
-            return [];
-        }
-        const to = this.tree.validateNode(toNode);
-        if (to === undefined) {
-            return [];
-        }
-        const from = this.tree.validateNode(fromNode);
-        if (from === undefined) {
-            return [];
-        }
+    // toggleSelection(node: Readonly<SelectableTreeNode>): void {
+    //     if (node.selected) {
+    //         this.unselectNode(node);
+    //     } else {
+    //         this.selectNode(node, true);
+    //     }
+    // }
 
-        let started = false;
-        let finished = false;
-        const range: TreeNode[] = [];
-        for (const node of new PreOrderTreeIterator(root, { pruneCollapsed: true })) {
-            if (finished) {
-                break;
-            }
-            // Only collect items which are between (inclusive) the `from` node and the `to` node.
-            if (node === from || node === to) {
-                if (started) {
-                    finished = true;
-                } else {
-                    started = true;
-                }
-            }
-            if (started) {
-                range.push(node);
-            }
-        }
+    // selectionRange(toNode: Readonly<SelectableTreeNode>, fromNode: Readonly<SelectableTreeNode>): ReadonlyArray<Readonly<SelectableTreeNode>> {
+    //     if (toNode === fromNode) {
+    //         return [];
+    //     }
+    //     const { root } = this;
+    //     if (root === undefined) {
+    //         return [];
+    //     }
+    //     const to = this.tree.validateNode(toNode);
+    //     if (to === undefined) {
+    //         return [];
+    //     }
+    //     const from = this.tree.validateNode(fromNode);
+    //     if (from === undefined) {
+    //         return [];
+    //     }
 
-        // We need to reverse the range order.
-        if (range.indexOf(from) > range.indexOf(to)) {
-            range.reverse();
-        }
-        return range.filter(SelectableTreeNode.is).slice();
-    }
+    //     let started = false;
+    //     let finished = false;
+    //     const range: TreeNode[] = [];
+    //     for (const node of new PreOrderTreeIterator(root, { pruneCollapsed: true })) {
+    //         if (finished) {
+    //             break;
+    //         }
+    //         // Only collect items which are between (inclusive) the `from` node and the `to` node.
+    //         if (node === from || node === to) {
+    //             if (started) {
+    //                 finished = true;
+    //             } else {
+    //                 started = true;
+    //             }
+    //         }
+    //         if (started) {
+    //             range.push(node);
+    //         }
+    //     }
 
-    selectRange(toNode: Readonly<SelectableTreeNode>, fromNode?: Readonly<SelectableTreeNode>, preserveSelection?: boolean): void {
-        const range = this.selectionRange(toNode, fromNode ? fromNode : this.selectedNodes[0]).slice().reverse();
-        if (range.length === 0) {
-            return;
-        }
-        if (!!preserveSelection) {
-            const copy = this.selectedNodes.slice();
-            for (const node of copy) {
-                const index = range.indexOf(node);
-                if (index !== -1) {
-                    copy.splice(index, 1);
-                }
-            }
-            this.setSelection([...range, ...copy]);
-        } else {
-            this.setSelection(range);
-        }
-    }
+    //     // We need to reverse the range order.
+    //     if (range.indexOf(from) > range.indexOf(to)) {
+    //         range.reverse();
+    //     }
+    //     return range.filter(SelectableTreeNode.is).slice();
+    // }
+
+    // selectRange(toNode: Readonly<SelectableTreeNode>, fromNode?: Readonly<SelectableTreeNode>, preserveSelection?: boolean): void {
+    //     const range = this.selectionRange(toNode, fromNode ? fromNode : this.selectedNodes[0]).slice().reverse();
+    //     if (range.length === 0) {
+    //         return;
+    //     }
+    //     if (!!preserveSelection) {
+    //         const copy = this.selectedNodes.slice();
+    //         for (const node of copy) {
+    //             const index = range.indexOf(node);
+    //             if (index !== -1) {
+    //                 copy.splice(index, 1);
+    //             }
+    //         }
+    //         this.setSelection([...range, ...copy]);
+    //     } else {
+    //         this.setSelection(range);
+    //     }
+    // }
 
 }

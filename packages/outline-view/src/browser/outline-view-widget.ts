@@ -88,7 +88,7 @@ export class OutlineViewWidget extends TreeWidget {
 
     protected onUpdateRequest(msg: Message): void {
         if (!this.model.selectedNodes && SelectableTreeNode.is(this.model.root)) {
-            this.model.setSelection([this.model.root]);
+            this.model.addSelection({ node: this.model.root });
         }
         super.onUpdateRequest(msg);
     }
@@ -97,6 +97,7 @@ export class OutlineViewWidget extends TreeWidget {
         if (OutlineSymbolInformationNode.is(node)) {
             return h.div({ className: "symbol-icon symbol-icon-center " + node.iconClass });
         }
+        // tslint:disable-next-line:no-null-keyword
         return null;
     }
 
