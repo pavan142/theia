@@ -114,7 +114,7 @@ export interface TreeModel extends Tree, TreeSelectionService, TreeExpansionServ
     /**
      * Returns with the nodes between (inclusive) the `toNode` and the `fromNode`. Returns with an empty array if either the `toNode` or the `fromNode` is invalid.
      */
-    calculateRange(toNode: Readonly<SelectableTreeNode>, fromNode: Readonly<SelectableTreeNode>): ReadonlyArray<Readonly<SelectableTreeNode>>;
+    selectionRange(toNode: Readonly<SelectableTreeNode>, fromNode: Readonly<SelectableTreeNode>): ReadonlyArray<Readonly<SelectableTreeNode>>;
 
     /**
      * Calculates and sets the selection range between the `fromNode` and the `toNode`.
@@ -383,7 +383,7 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
         }
     }
 
-    calculateRange(toNode: Readonly<SelectableTreeNode>, fromNode: Readonly<SelectableTreeNode>): ReadonlyArray<Readonly<SelectableTreeNode>> {
+    selectionRange(toNode: Readonly<SelectableTreeNode>, fromNode: Readonly<SelectableTreeNode>): ReadonlyArray<Readonly<SelectableTreeNode>> {
         if (toNode === fromNode) {
             return [];
         }
@@ -428,7 +428,7 @@ export class TreeModelImpl implements TreeModel, SelectionProvider<ReadonlyArray
     }
 
     selectRange(toNode: Readonly<SelectableTreeNode>, fromNode?: Readonly<SelectableTreeNode>, preserveSelection?: boolean): void {
-        const range = this.calculateRange(toNode, fromNode ? fromNode : this.selectedNodes[0]);
+        const range = this.selectionRange(toNode, fromNode ? fromNode : this.selectedNodes[0]).slice().reverse();
         if (range.length === 0) {
             return;
         }
